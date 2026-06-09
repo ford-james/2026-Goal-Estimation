@@ -222,8 +222,7 @@ export function Leaderboard() {
                       left: 0,
                       right: 0,
                       height: '3px',
-                      background: getRankColor(rank),
-                      animation: 'shimmer 2s infinite'
+                      background: getRankColor(rank)
                     }} />
                   )}
                 </div>

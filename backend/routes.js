@@ -292,6 +292,43 @@ router.get('/watson/match/:matchId', (req, res) => {
   );
 });
 
+// Create new match (admin)
+router.post('/matches', (req, res) => {
+  const { matchDate, matchTime, homeTeam, awayTeam, group } = req.body;
+  
+  if (!matchDate || !matchTime || !homeTeam || !awayTeam) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  
+  // Generate match ID
+  db.get('SELECT COUNT(*) as count FROM matches', (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    
+    const count = row.count + 1;
+    const matchId = `match_${String(count).padStart(3, '0')}`;
+    
+    db.run(
+      'INSERT INTO matches (id, match_date, match_time, home_team, away_team, status) VALUES (?, ?, ?, ?, ?, "scheduled")',
+      [matchId, matchDate, matchTime, homeTeam, awayTeam],
+      function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        res.json({
+          success: true,
+          match: {
+            id: matchId,
+            match_date: matchDate,
+            match_time: matchTime,
+            home_team: homeTeam,
+            away_team: awayTeam,
+            status: 'scheduled'
+          }
+        });
+      }
+    );
+  });
+});
+
 module.exports = router;
 
 // Made with Bob

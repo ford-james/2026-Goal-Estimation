@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { UserSelect } from './pages/UserSelect';
 import { Dashboard } from './pages/Dashboard';
 import { Leaderboard } from './pages/Leaderboard';
+import { Admin } from './pages/Admin';
 
 function App() {
   const [userId, setUserId] = useState(localStorage.getItem('userId'));
@@ -58,14 +59,21 @@ function App() {
           Dashboard
         </NavButton>
         
-        <NavButton 
+        <NavButton
           active={page === 'leaderboard'}
           onClick={() => setPage('leaderboard')}
         >
           Leaderboard
         </NavButton>
         
-        <button 
+        <NavButton
+          active={page === 'admin'}
+          onClick={() => setPage('admin')}
+        >
+          Admin
+        </NavButton>
+        
+        <button
           onClick={handleLogout}
           style={{ 
             color: 'white', 
@@ -92,12 +100,13 @@ function App() {
         </button>
       </nav>
       
-      <main style={{ 
+      <main style={{
         paddingBottom: 'var(--spacing-10)',
         animation: 'fadeIn 0.4s ease-out'
       }}>
         {page === 'dashboard' && <Dashboard userId={userId} />}
         {page === 'leaderboard' && <Leaderboard />}
+        {page === 'admin' && <Admin />}
       </main>
     </div>
   );

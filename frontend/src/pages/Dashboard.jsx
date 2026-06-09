@@ -184,204 +184,346 @@ export function Dashboard({ userId }) {
           </p>
         </div>
       ) : (
-        <div style={{ display: 'grid', gap: 'var(--spacing-05)' }}>
+        <div style={{ display: 'grid', gap: 'var(--spacing-06)' }}>
           {matches.map((match, index) => {
             const locked = isMatchLocked(match);
             const userPred = userPredictions[match.id];
             const currentPrediction = predictions[match.id] ?? (userPred ? userPred.predicted_goals : '');
             
             return (
-              <div 
-                key={match.id} 
+              <div
+                key={match.id}
                 className="card hover-lift"
-                style={{ 
-                  padding: 'var(--spacing-06)', 
-                  background: locked ? 'linear-gradient(135deg, #f4f4f4 0%, #e0e0e0 100%)' : 'white',
-                  borderRadius: '12px',
+                style={{
+                  padding: 0,
+                  background: locked
+                    ? 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)'
+                    : 'linear-gradient(135deg, #ffffff 0%, #f8f9ff 100%)',
+                  borderRadius: '16px',
                   animation: `slideIn 0.5s ease-out ${index * 0.1}s both`,
-                  border: locked ? '2px solid var(--ibm-gray-30)' : '2px solid var(--ibm-blue-30)',
-                  opacity: locked ? 0.7 : 1,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                  border: locked ? '2px solid var(--ibm-gray-30)' : '2px solid var(--ibm-blue-40)',
+                  opacity: locked ? 0.85 : 1,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  boxShadow: locked
+                    ? '0 4px 12px rgba(0, 0, 0, 0.08)'
+                    : '0 4px 20px rgba(15, 98, 254, 0.15)'
                 }}
               >
-                {/* Match Header */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: 'var(--spacing-05)',
-                  flexWrap: 'wrap',
-                  gap: 'var(--spacing-03)'
-                }}>
-                  <div style={{ 
-                    fontSize: '0.875rem', 
-                    color: 'var(--ibm-gray-70)',
-                    fontWeight: '500'
+                {/* Decorative top bar */}
+                <div style={{
+                  height: '6px',
+                  background: locked
+                    ? 'linear-gradient(90deg, var(--ibm-gray-40) 0%, var(--ibm-gray-50) 100%)'
+                    : 'linear-gradient(90deg, var(--ibm-blue-60) 0%, var(--ibm-purple-50) 100%)',
+                  width: '100%'
+                }} />
+                
+                <div style={{ padding: 'var(--spacing-06)' }}>
+                  {/* Match Header */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 'var(--spacing-06)',
+                    flexWrap: 'wrap',
+                    gap: 'var(--spacing-03)'
                   }}>
-                    {formatMatchTime(match)}
-                  </div>
-                  
-                  {locked ? (
                     <div style={{
-                      padding: 'var(--spacing-02) var(--spacing-04)',
-                      background: 'var(--ibm-gray-50)',
-                      color: 'white',
-                      borderRadius: '20px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 'var(--spacing-02)'
+                      gap: 'var(--spacing-03)'
                     }}>
-                      🔒 LOCKED
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '8px',
+                        background: locked
+                          ? 'linear-gradient(135deg, var(--ibm-gray-30) 0%, var(--ibm-gray-40) 100%)'
+                          : 'linear-gradient(135deg, var(--ibm-blue-50) 0%, var(--ibm-blue-60) 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.25rem',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        ⚽
+                      </div>
+                      <div>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--ibm-gray-70)',
+                          fontWeight: '600',
+                          marginBottom: '2px'
+                        }}>
+                          {formatMatchTime(match)}
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: 'var(--ibm-gray-60)',
+                          fontWeight: '500'
+                        }}>
+                          Match #{match.id.split('_')[1]}
+                        </div>
+                      </div>
                     </div>
-                  ) : (
+                    
+                    {locked ? (
+                      <div style={{
+                        padding: 'var(--spacing-03) var(--spacing-05)',
+                        background: 'linear-gradient(135deg, var(--ibm-gray-60) 0%, var(--ibm-gray-70) 100%)',
+                        color: 'white',
+                        borderRadius: '24px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-02)',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+                        letterSpacing: '0.5px'
+                      }}>
+                        🔒 LOCKED
+                      </div>
+                    ) : (
+                      <div style={{
+                        padding: 'var(--spacing-03) var(--spacing-05)',
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        borderRadius: '24px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-02)',
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                        letterSpacing: '0.5px',
+                        animation: 'pulse 2s ease-in-out infinite'
+                      }}>
+                        ⏰ {formatTimeUntilLock(match)}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Match Teams */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 'var(--spacing-06)',
+                    padding: 'var(--spacing-05)',
+                    background: locked
+                      ? 'rgba(0, 0, 0, 0.02)'
+                      : 'linear-gradient(135deg, rgba(15, 98, 254, 0.03) 0%, rgba(138, 63, 252, 0.03) 100%)',
+                    borderRadius: '12px',
+                    border: `1px solid ${locked ? 'var(--ibm-gray-20)' : 'var(--ibm-blue-20)'}`
+                  }}>
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{
+                        fontSize: '2.5rem',
+                        marginBottom: 'var(--spacing-02)'
+                      }}>
+                        🏴
+                      </div>
+                      <div style={{
+                        fontSize: '1.25rem',
+                        fontWeight: '700',
+                        color: locked ? 'var(--ibm-gray-70)' : 'var(--ibm-gray-100)',
+                        marginBottom: 'var(--spacing-01)',
+                        lineHeight: 1.2
+                      }}>
+                        {match.home_team}
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--ibm-gray-60)',
+                        fontWeight: '500',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Home
+                      </div>
+                    </div>
+                    
                     <div style={{
-                      padding: 'var(--spacing-02) var(--spacing-04)',
-                      background: 'linear-gradient(135deg, var(--ibm-blue-60) 0%, var(--ibm-blue-70) 100%)',
-                      color: 'white',
-                      borderRadius: '20px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
+                      padding: '0 var(--spacing-05)',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
                       gap: 'var(--spacing-02)'
                     }}>
-                      ⏰ {formatTimeUntilLock(match)}
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        background: locked
+                          ? 'linear-gradient(135deg, var(--ibm-gray-30) 0%, var(--ibm-gray-40) 100%)'
+                          : 'linear-gradient(135deg, var(--ibm-blue-60) 0%, var(--ibm-purple-50) 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1rem',
+                        fontWeight: '900',
+                        color: 'white',
+                        boxShadow: locked
+                          ? '0 4px 12px rgba(0, 0, 0, 0.1)'
+                          : '0 4px 16px rgba(15, 98, 254, 0.3)',
+                        letterSpacing: '1px'
+                      }}>
+                        VS
+                      </div>
+                    </div>
+                    
+                    <div style={{ flex: 1, textAlign: 'center' }}>
+                      <div style={{
+                        fontSize: '2.5rem',
+                        marginBottom: 'var(--spacing-02)'
+                      }}>
+                        🏴
+                      </div>
+                      <div style={{
+                        fontSize: '1.25rem',
+                        fontWeight: '700',
+                        color: locked ? 'var(--ibm-gray-70)' : 'var(--ibm-gray-100)',
+                        marginBottom: 'var(--spacing-01)',
+                        lineHeight: 1.2
+                      }}>
+                        {match.away_team}
+                      </div>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--ibm-gray-60)',
+                        fontWeight: '500',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        Away
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Prediction Form */}
+                  {!locked && (
+                    <form onSubmit={(e) => handleSubmit(match.id, e)} style={{
+                      display: 'flex',
+                      gap: 'var(--spacing-04)',
+                      alignItems: 'center',
+                      padding: 'var(--spacing-06)',
+                      background: 'linear-gradient(135deg, var(--ibm-blue-10) 0%, rgba(138, 63, 252, 0.08) 100%)',
+                      borderRadius: '12px',
+                      flexWrap: 'wrap',
+                      border: '2px dashed var(--ibm-blue-30)'
+                    }}>
+                      <label style={{
+                        fontSize: '0.875rem',
+                        fontWeight: '700',
+                        color: 'var(--ibm-gray-100)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 'var(--spacing-02)'
+                      }}>
+                        <span style={{ fontSize: '1.25rem' }}>🎯</span>
+                        Your Prediction:
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="20"
+                        value={currentPrediction}
+                        onChange={(e) => handlePredictionChange(match.id, e.target.value)}
+                        placeholder="?"
+                        className="input"
+                        style={{
+                          flex: '0 0 100px',
+                          fontSize: '1.5rem',
+                          fontWeight: '700',
+                          textAlign: 'center',
+                          padding: 'var(--spacing-04)',
+                          border: '2px solid var(--ibm-blue-40)',
+                          background: 'white',
+                          boxShadow: '0 2px 8px rgba(15, 98, 254, 0.1)'
+                        }}
+                        required
+                      />
+                      <span style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--ibm-gray-70)',
+                        fontWeight: '600'
+                      }}>
+                        total goals
+                      </span>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        style={{
+                          marginLeft: 'auto',
+                          padding: 'var(--spacing-04) var(--spacing-06)',
+                          fontSize: '0.875rem',
+                          fontWeight: '700',
+                          background: 'linear-gradient(135deg, var(--ibm-blue-60) 0%, var(--ibm-purple-50) 100%)',
+                          boxShadow: '0 4px 12px rgba(15, 98, 254, 0.3)',
+                          letterSpacing: '0.5px'
+                        }}
+                      >
+                        {userPred ? '✏️ Update Prediction' : '✓ Submit Prediction'}
+                      </button>
+                    </form>
+                  )}
+
+                  {/* Show existing prediction if locked */}
+                  {locked && userPred && (
+                    <div style={{
+                      padding: 'var(--spacing-06)',
+                      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      border: '2px solid #bae6fd'
+                    }}>
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--ibm-gray-70)',
+                        marginBottom: 'var(--spacing-03)',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                      }}>
+                        Your Prediction
+                      </div>
+                      <div style={{
+                        fontSize: '2.5rem',
+                        fontWeight: '900',
+                        color: 'var(--ibm-blue-60)',
+                        marginBottom: 'var(--spacing-02)'
+                      }}>
+                        {userPred.predicted_goals}
+                      </div>
+                      <div style={{
+                        fontSize: '0.875rem',
+                        color: 'var(--ibm-gray-70)',
+                        fontWeight: '600'
+                      }}>
+                        total goals
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No prediction made and locked */}
+                  {locked && !userPred && (
+                    <div style={{
+                      padding: 'var(--spacing-06)',
+                      background: 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)',
+                      borderRadius: '12px',
+                      textAlign: 'center',
+                      color: 'var(--ibm-gray-70)',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      border: '2px solid #fecaca'
+                    }}>
+                      <div style={{ fontSize: '2rem', marginBottom: 'var(--spacing-02)' }}>😔</div>
+                      No prediction made
                     </div>
                   )}
                 </div>
-
-                {/* Match Teams */}
-                <div style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  marginBottom: 'var(--spacing-05)'
-                }}>
-                  <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ 
-                      fontSize: '1.5rem', 
-                      fontWeight: '600',
-                      color: locked ? 'var(--ibm-gray-70)' : 'var(--ibm-gray-100)'
-                    }}>
-                      {match.home_team}
-                    </div>
-                  </div>
-                  
-                  <div style={{ 
-                    padding: '0 var(--spacing-06)',
-                    fontSize: '1.25rem',
-                    fontWeight: '700',
-                    color: 'var(--ibm-gray-50)',
-                    minWidth: '60px',
-                    textAlign: 'center'
-                  }}>
-                    vs
-                  </div>
-                  
-                  <div style={{ flex: 1, textAlign: 'center' }}>
-                    <div style={{ 
-                      fontSize: '1.5rem', 
-                      fontWeight: '600',
-                      color: locked ? 'var(--ibm-gray-70)' : 'var(--ibm-gray-100)'
-                    }}>
-                      {match.away_team}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Prediction Form */}
-                {!locked && (
-                  <form onSubmit={(e) => handleSubmit(match.id, e)} style={{
-                    display: 'flex',
-                    gap: 'var(--spacing-04)',
-                    alignItems: 'center',
-                    padding: 'var(--spacing-05)',
-                    background: 'var(--ibm-blue-10)',
-                    borderRadius: '8px',
-                    flexWrap: 'wrap'
-                  }}>
-                    <label style={{ 
-                      fontSize: '0.875rem', 
-                      fontWeight: '600',
-                      color: 'var(--ibm-gray-100)'
-                    }}>
-                      Your Prediction:
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="20"
-                      value={currentPrediction}
-                      onChange={(e) => handlePredictionChange(match.id, e.target.value)}
-                      placeholder="Goals"
-                      className="input"
-                      style={{ 
-                        flex: '0 0 100px',
-                        fontSize: '1.125rem',
-                        fontWeight: '600',
-                        textAlign: 'center',
-                        padding: 'var(--spacing-03)'
-                      }}
-                      required
-                    />
-                    <span style={{ fontSize: '0.875rem', color: 'var(--ibm-gray-70)', fontWeight: '500' }}>
-                      goals
-                    </span>
-                    <button 
-                      type="submit"
-                      className="btn btn-primary"
-                      style={{ 
-                        marginLeft: 'auto',
-                        padding: 'var(--spacing-03) var(--spacing-05)',
-                        fontSize: '0.875rem',
-                        fontWeight: '600'
-                      }}
-                    >
-                      {userPred ? '✏️ Update' : '✓ Submit'}
-                    </button>
-                  </form>
-                )}
-
-                {/* Show existing prediction if locked */}
-                {locked && userPred && (
-                  <div style={{
-                    padding: 'var(--spacing-05)',
-                    background: 'var(--ibm-gray-20)',
-                    borderRadius: '8px',
-                    textAlign: 'center'
-                  }}>
-                    <div style={{ 
-                      fontSize: '0.875rem', 
-                      color: 'var(--ibm-gray-70)',
-                      marginBottom: 'var(--spacing-02)'
-                    }}>
-                      Your Prediction
-                    </div>
-                    <div style={{ 
-                      fontSize: '1.5rem', 
-                      fontWeight: '700',
-                      color: 'var(--ibm-gray-100)'
-                    }}>
-                      {userPred.predicted_goals} goals
-                    </div>
-                  </div>
-                )}
-
-                {/* No prediction made and locked */}
-                {locked && !userPred && (
-                  <div style={{
-                    padding: 'var(--spacing-05)',
-                    background: 'var(--ibm-gray-20)',
-                    borderRadius: '8px',
-                    textAlign: 'center',
-                    color: 'var(--ibm-gray-70)',
-                    fontSize: '0.875rem'
-                  }}>
-                    No prediction made
-                  </div>
-                )}
               </div>
             );
           })}

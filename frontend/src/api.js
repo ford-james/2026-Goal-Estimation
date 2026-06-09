@@ -46,6 +46,13 @@ export const api = {
   lockPredictions: () =>
     fetch(`${API}/predictions/lock`, {
       method: 'POST'
+    }).then(r => r.json()),
+  
+  createMatch: (matchDate, matchTime, homeTeam, awayTeam, group) =>
+    fetch(`${API}/matches`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matchDate, matchTime, homeTeam, awayTeam, group })
     }).then(r => r.json())
 };
 
