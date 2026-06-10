@@ -4,7 +4,9 @@ import { api } from '../api';
 export function Dashboard({ userId }) {
   const [matches, setMatches] = useState([]);
   const [predictions, setPredictions] = useState({});
+  const [winners, setWinners] = useState({});
   const [userPredictions, setUserPredictions] = useState({});
+  const [matchStats, setMatchStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -35,6 +37,20 @@ export function Dashboard({ userId }) {
       });
       setUserPredictions(predMap);
       
+      // Load stats for each match
+      const statsPromises = upcomingMatches.map(match =>
+        api.getMatchPredictionStats(match.id)
+          .then(stats => ({ matchId: match.id, stats }))
+          .catch(() => ({ matchId: match.id, stats: null }))
+      );
+      
+      const statsResults = await Promise.all(statsPromises);
+      const statsMap = {};
+      statsResults.forEach(({ matchId, stats }) => {
+        statsMap[matchId] = stats;
+      });
+      setMatchStats(statsMap);
+      
     } catch (err) {
       setError('Failed to load data: ' + err.message);
       console.error('Error loading data:', err);
@@ -50,25 +66,38 @@ export function Dashboard({ userId }) {
     }));
   };
 
+  const handleWinnerChange = (matchId, winner) => {
+    setWinners(prev => ({
+      ...prev,
+      [matchId]: winner
+    }));
+  };
+
   const handleSubmit = async (matchId, e) => {
     e.preventDefault();
     const goals = predictions[matchId];
+    const predictedWinner = winners[matchId];
     
     if (goals === undefined || goals === '') {
-      setError('Please enter a prediction');
+      setError('Please enter a goal prediction');
       return;
     }
 
     try {
-      await api.submitPrediction(userId, matchId, parseInt(goals));
+      await api.submitPrediction(userId, matchId, parseInt(goals), predictedWinner);
       setError(null);
       // Reload data to get updated predictions
       await loadData();
-      // Clear the input for this match
+      // Clear the inputs for this match
       setPredictions(prev => {
         const newPreds = { ...prev };
         delete newPreds[matchId];
         return newPreds;
+      });
+      setWinners(prev => {
+        const newWinners = { ...prev };
+        delete newWinners[matchId];
+        return newWinners;
       });
     } catch (err) {
       setError('Failed to submit prediction: ' + err.message);
@@ -402,61 +431,288 @@ export function Dashboard({ userId }) {
                     </div>
                   </div>
 
-                  {/* Prediction Form */}
-                  {!locked && (
-                    <form onSubmit={(e) => handleSubmit(match.id, e)} style={{
-                      display: 'flex',
-                      gap: 'var(--spacing-04)',
-                      alignItems: 'center',
-                      padding: 'var(--spacing-06)',
-                      background: 'linear-gradient(135deg, var(--ibm-blue-10) 0%, rgba(138, 63, 252, 0.08) 100%)',
+                  {/* Match Statistics */}
+                  {matchStats[match.id] && matchStats[match.id].total > 0 && (
+                    <div style={{
+                      padding: 'var(--spacing-05)',
+                      background: 'linear-gradient(135deg, rgba(15, 98, 254, 0.05) 0%, rgba(138, 63, 252, 0.05) 100%)',
                       borderRadius: '12px',
-                      flexWrap: 'wrap',
-                      border: '2px dashed var(--ibm-blue-30)'
+                      marginBottom: 'var(--spacing-06)',
+                      border: '1px solid var(--ibm-blue-20)'
                     }}>
-                      <label style={{
-                        fontSize: '0.875rem',
-                        fontWeight: '700',
-                        color: 'var(--ibm-gray-100)',
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--ibm-gray-70)',
+                        marginBottom: 'var(--spacing-04)',
+                        fontWeight: '600',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px',
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: 'var(--spacing-02)'
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
                       }}>
-                        <span style={{ fontSize: '1.25rem' }}>🎯</span>
-                        Your Prediction:
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="20"
-                        value={currentPrediction}
-                        onChange={(e) => handlePredictionChange(match.id, e.target.value)}
-                        placeholder="?"
-                        className="input"
-                        style={{
-                          flex: '0 0 100px',
-                          fontSize: '1.5rem',
-                          fontWeight: '700',
-                          textAlign: 'center',
-                          padding: 'var(--spacing-04)',
-                          border: '2px solid var(--ibm-blue-40)',
-                          background: 'white',
-                          boxShadow: '0 2px 8px rgba(15, 98, 254, 0.1)'
-                        }}
-                        required
-                      />
-                      <span style={{
-                        fontSize: '0.875rem',
+                        <span>Community Predictions ({matchStats[match.id].total})</span>
+                        <span style={{
+                          color: 'var(--ibm-blue-60)',
+                          fontSize: '0.875rem',
+                          fontWeight: '700'
+                        }}>
+                          ⚽ Avg: {matchStats[match.id].avgGoals} goals
+                        </span>
+                      </div>
+                      
+                      {/* Horizontal Bar */}
+                      <div style={{
+                        display: 'flex',
+                        height: '32px',
+                        borderRadius: '6px',
+                        overflow: 'hidden',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+                      }}>
+                        {/* Home Win */}
+                        {matchStats[match.id].winPercentage > 0 && (
+                          <div style={{
+                            width: `${matchStats[match.id].winPercentage}%`,
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            transition: 'all 0.3s ease'
+                          }}>
+                            {matchStats[match.id].winPercentage}%
+                          </div>
+                        )}
+                        
+                        {/* Draw */}
+                        {matchStats[match.id].drawPercentage > 0 && (
+                          <div style={{
+                            width: `${matchStats[match.id].drawPercentage}%`,
+                            background: 'linear-gradient(135deg, var(--ibm-gray-50) 0%, var(--ibm-gray-60) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            transition: 'all 0.3s ease'
+                          }}>
+                            {matchStats[match.id].drawPercentage}%
+                          </div>
+                        )}
+                        
+                        {/* Away Win */}
+                        {matchStats[match.id].lossPercentage > 0 && (
+                          <div style={{
+                            width: `${matchStats[match.id].lossPercentage}%`,
+                            background: 'linear-gradient(135deg, var(--ibm-blue-50) 0%, var(--ibm-blue-60) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: '700',
+                            transition: 'all 0.3s ease'
+                          }}>
+                            {matchStats[match.id].lossPercentage}%
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Legend */}
+                      <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-around',
+                        marginTop: 'var(--spacing-03)',
+                        fontSize: '0.75rem',
                         color: 'var(--ibm-gray-70)',
                         fontWeight: '600'
                       }}>
-                        total goals
-                      </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-02)' }}>
+                          <div style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '2px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                          }} />
+                          {match.home_team}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-02)' }}>
+                          <div style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '2px',
+                            background: 'linear-gradient(135deg, var(--ibm-gray-50) 0%, var(--ibm-gray-60) 100%)'
+                          }} />
+                          Draw
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-02)' }}>
+                          <div style={{
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '2px',
+                            background: 'linear-gradient(135deg, var(--ibm-blue-50) 0%, var(--ibm-blue-60) 100%)'
+                          }} />
+                          {match.away_team}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Prediction Form */}
+                  {!locked && (
+                    <form onSubmit={(e) => handleSubmit(match.id, e)} style={{
+                      padding: 'var(--spacing-06)',
+                      background: 'linear-gradient(135deg, var(--ibm-blue-10) 0%, rgba(138, 63, 252, 0.08) 100%)',
+                      borderRadius: '12px',
+                      border: '2px dashed var(--ibm-blue-30)'
+                    }}>
+                      {/* Goal Prediction */}
+                      <div style={{
+                        display: 'flex',
+                        gap: 'var(--spacing-04)',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        marginBottom: 'var(--spacing-05)'
+                      }}>
+                        <label style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '700',
+                          color: 'var(--ibm-gray-100)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--spacing-02)'
+                        }}>
+                          <span style={{ fontSize: '1.25rem' }}>🎯</span>
+                          Total Goals:
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={currentPrediction}
+                          onChange={(e) => handlePredictionChange(match.id, e.target.value)}
+                          placeholder="?"
+                          className="input"
+                          style={{
+                            flex: '0 0 100px',
+                            fontSize: '1.5rem',
+                            fontWeight: '700',
+                            textAlign: 'center',
+                            padding: 'var(--spacing-04)',
+                            border: '2px solid var(--ibm-blue-40)',
+                            background: 'white',
+                            boxShadow: '0 2px 8px rgba(15, 98, 254, 0.1)'
+                          }}
+                          required
+                        />
+                        <span style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--ibm-gray-70)',
+                          fontWeight: '600'
+                        }}>
+                          goals
+                        </span>
+                      </div>
+
+                      {/* Winner Prediction */}
+                      <div style={{
+                        marginBottom: 'var(--spacing-05)'
+                      }}>
+                        <label style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '700',
+                          color: 'var(--ibm-gray-100)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 'var(--spacing-02)',
+                          marginBottom: 'var(--spacing-03)'
+                        }}>
+                          <span style={{ fontSize: '1.25rem' }}>🏆</span>
+                          Who will win? <span style={{ fontSize: '0.75rem', fontWeight: '500', color: 'var(--ibm-gray-60)' }}>(+50 bonus points)</span>
+                        </label>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(3, 1fr)',
+                          gap: 'var(--spacing-03)'
+                        }}>
+                          <button
+                            type="button"
+                            onClick={() => handleWinnerChange(match.id, match.home_team)}
+                            style={{
+                              padding: 'var(--spacing-04)',
+                              borderRadius: '8px',
+                              border: `2px solid ${(winners[match.id] || userPred?.predicted_winner) === match.home_team ? 'var(--ibm-blue-60)' : 'var(--ibm-gray-30)'}`,
+                              background: (winners[match.id] || userPred?.predicted_winner) === match.home_team
+                                ? 'linear-gradient(135deg, var(--ibm-blue-50) 0%, var(--ibm-blue-60) 100%)'
+                                : 'white',
+                              color: (winners[match.id] || userPred?.predicted_winner) === match.home_team ? 'white' : 'var(--ibm-gray-100)',
+                              fontSize: '0.875rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              boxShadow: (winners[match.id] || userPred?.predicted_winner) === match.home_team
+                                ? '0 4px 12px rgba(15, 98, 254, 0.3)'
+                                : '0 2px 4px rgba(0, 0, 0, 0.1)'
+                            }}
+                          >
+                            {match.home_team}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleWinnerChange(match.id, 'draw')}
+                            style={{
+                              padding: 'var(--spacing-04)',
+                              borderRadius: '8px',
+                              border: `2px solid ${(winners[match.id] || userPred?.predicted_winner) === 'draw' ? 'var(--ibm-gray-60)' : 'var(--ibm-gray-30)'}`,
+                              background: (winners[match.id] || userPred?.predicted_winner) === 'draw'
+                                ? 'linear-gradient(135deg, var(--ibm-gray-50) 0%, var(--ibm-gray-60) 100%)'
+                                : 'white',
+                              color: (winners[match.id] || userPred?.predicted_winner) === 'draw' ? 'white' : 'var(--ibm-gray-100)',
+                              fontSize: '0.875rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              boxShadow: (winners[match.id] || userPred?.predicted_winner) === 'draw'
+                                ? '0 4px 12px rgba(0, 0, 0, 0.2)'
+                                : '0 2px 4px rgba(0, 0, 0, 0.1)'
+                            }}
+                          >
+                            Draw
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleWinnerChange(match.id, match.away_team)}
+                            style={{
+                              padding: 'var(--spacing-04)',
+                              borderRadius: '8px',
+                              border: `2px solid ${(winners[match.id] || userPred?.predicted_winner) === match.away_team ? 'var(--ibm-blue-60)' : 'var(--ibm-gray-30)'}`,
+                              background: (winners[match.id] || userPred?.predicted_winner) === match.away_team
+                                ? 'linear-gradient(135deg, var(--ibm-blue-50) 0%, var(--ibm-blue-60) 100%)'
+                                : 'white',
+                              color: (winners[match.id] || userPred?.predicted_winner) === match.away_team ? 'white' : 'var(--ibm-gray-100)',
+                              fontSize: '0.875rem',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              boxShadow: (winners[match.id] || userPred?.predicted_winner) === match.away_team
+                                ? '0 4px 12px rgba(15, 98, 254, 0.3)'
+                                : '0 2px 4px rgba(0, 0, 0, 0.1)'
+                            }}
+                          >
+                            {match.away_team}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Submit Button */}
                       <button
                         type="submit"
                         className="btn btn-primary"
                         style={{
-                          marginLeft: 'auto',
+                          width: '100%',
                           padding: 'var(--spacing-04) var(--spacing-06)',
                           fontSize: '0.875rem',
                           fontWeight: '700',
@@ -476,34 +732,64 @@ export function Dashboard({ userId }) {
                       padding: 'var(--spacing-06)',
                       background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
                       borderRadius: '12px',
-                      textAlign: 'center',
                       border: '2px solid #bae6fd'
                     }}>
                       <div style={{
                         fontSize: '0.75rem',
                         color: 'var(--ibm-gray-70)',
-                        marginBottom: 'var(--spacing-03)',
+                        marginBottom: 'var(--spacing-04)',
                         fontWeight: '600',
                         textTransform: 'uppercase',
-                        letterSpacing: '1px'
+                        letterSpacing: '1px',
+                        textAlign: 'center'
                       }}>
                         Your Prediction
                       </div>
-                      <div style={{
-                        fontSize: '2.5rem',
-                        fontWeight: '900',
-                        color: 'var(--ibm-blue-60)',
-                        marginBottom: 'var(--spacing-02)'
-                      }}>
-                        {userPred.predicted_goals}
+                      
+                      {/* Goals Prediction */}
+                      <div style={{ textAlign: 'center', marginBottom: 'var(--spacing-05)' }}>
+                        <div style={{
+                          fontSize: '2.5rem',
+                          fontWeight: '900',
+                          color: 'var(--ibm-blue-60)',
+                          marginBottom: 'var(--spacing-02)'
+                        }}>
+                          {userPred.predicted_goals}
+                        </div>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          color: 'var(--ibm-gray-70)',
+                          fontWeight: '600'
+                        }}>
+                          total goals
+                        </div>
                       </div>
-                      <div style={{
-                        fontSize: '0.875rem',
-                        color: 'var(--ibm-gray-70)',
-                        fontWeight: '600'
-                      }}>
-                        total goals
-                      </div>
+
+                      {/* Winner Prediction */}
+                      {userPred.predicted_winner && (
+                        <div style={{
+                          padding: 'var(--spacing-04)',
+                          background: 'rgba(15, 98, 254, 0.1)',
+                          borderRadius: '8px',
+                          textAlign: 'center'
+                        }}>
+                          <div style={{
+                            fontSize: '0.75rem',
+                            color: 'var(--ibm-gray-70)',
+                            marginBottom: 'var(--spacing-02)',
+                            fontWeight: '600'
+                          }}>
+                            🏆 Predicted Winner
+                          </div>
+                          <div style={{
+                            fontSize: '1.125rem',
+                            fontWeight: '700',
+                            color: 'var(--ibm-blue-60)'
+                          }}>
+                            {userPred.predicted_winner === 'draw' ? 'Draw' : userPred.predicted_winner}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

@@ -12,7 +12,7 @@ router.get('/users', (req, res) => {
 
 // Submit or update prediction for a specific match
 router.post('/predictions', (req, res) => {
-  const { userId, matchId, goals } = req.body;
+  const { userId, matchId, goals, predictedWinner } = req.body;
   
   if (!userId || !matchId || goals === undefined) {
     return res.status(400).json({ error: 'Missing required fields' });
@@ -44,8 +44,8 @@ router.post('/predictions', (req, res) => {
           if (existing) {
             // Update existing prediction
             db.run(
-              'UPDATE predictions SET predicted_goals = ?, submitted_at = datetime("now") WHERE user_id = ? AND match_id = ?',
-              [goals, userId, matchId],
+              'UPDATE predictions SET predicted_goals = ?, predicted_winner = ?, submitted_at = datetime("now") WHERE user_id = ? AND match_id = ?',
+              [goals, predictedWinner || null, userId, matchId],
               function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ success: true, id: existing.id, updated: true });
@@ -55,8 +55,8 @@ router.post('/predictions', (req, res) => {
             // Create new prediction
             const id = `pred_${Date.now()}_${userId}_${matchId}`;
             db.run(
-              'INSERT INTO predictions (id, user_id, match_id, predicted_goals, submitted_at) VALUES (?, ?, ?, ?, datetime("now"))',
-              [id, userId, matchId, goals],
+              'INSERT INTO predictions (id, user_id, match_id, predicted_goals, predicted_winner, submitted_at) VALUES (?, ?, ?, ?, ?, datetime("now"))',
+              [id, userId, matchId, goals, predictedWinner || null],
               function(err) {
                 if (err) return res.status(500).json({ error: err.message });
                 res.json({ success: true, id, updated: false });
@@ -81,6 +81,63 @@ router.get('/predictions/match/:matchId', (req, res) => {
     (err, rows) => {
       if (err) return res.status(500).json({ error: err.message });
       res.json(rows);
+    }
+  );
+});
+
+// Get prediction statistics for a specific match
+router.get('/predictions/match/:matchId/stats', (req, res) => {
+  db.all(
+    `SELECT predicted_winner, predicted_goals FROM predictions WHERE match_id = ?`,
+    [req.params.matchId],
+    (err, predictions) => {
+      if (err) return res.status(500).json({ error: err.message });
+      
+      if (predictions.length === 0) {
+        return res.json({
+          total: 0,
+          winPercentage: 0,
+          drawPercentage: 0,
+          lossPercentage: 0,
+          avgGoals: 0
+        });
+      }
+      
+      // Get match info to determine home/away teams
+      db.get(
+        `SELECT home_team, away_team FROM matches WHERE id = ?`,
+        [req.params.matchId],
+        (err, match) => {
+          if (err) return res.status(500).json({ error: err.message });
+          if (!match) return res.status(404).json({ error: 'Match not found' });
+          
+          let homeWins = 0;
+          let draws = 0;
+          let awayWins = 0;
+          let totalGoals = 0;
+          
+          predictions.forEach(pred => {
+            if (pred.predicted_winner === match.home_team) {
+              homeWins++;
+            } else if (pred.predicted_winner === 'draw') {
+              draws++;
+            } else if (pred.predicted_winner === match.away_team) {
+              awayWins++;
+            }
+            totalGoals += pred.predicted_goals;
+          });
+          
+          const total = predictions.length;
+          
+          res.json({
+            total,
+            winPercentage: Math.round((homeWins / total) * 100),
+            drawPercentage: Math.round((draws / total) * 100),
+            lossPercentage: Math.round((awayWins / total) * 100),
+            avgGoals: (totalGoals / total).toFixed(1)
+          });
+        }
+      );
     }
   );
 });
@@ -116,14 +173,17 @@ router.get('/predictions/user/:userId/match/:matchId', (req, res) => {
 // Get leaderboard
 router.get('/leaderboard', (req, res) => {
   db.all(
-    `SELECT 
+    `SELECT
        u.id,
-       u.display_name, 
-       u.avatar_color, 
-       COALESCE(SUM(p.points), 0) as total_points,
+       u.display_name,
+       u.avatar_color,
+       COALESCE(SUM(p.points), 0) + COALESCE(SUM(p.winner_bonus), 0) as total_points,
+       COALESCE(SUM(p.points), 0) as goal_points,
+       COALESCE(SUM(p.winner_bonus), 0) as winner_bonus_points,
        COUNT(p.id) as predictions,
        COALESCE(AVG(ABS(p.predicted_goals - COALESCE(p.actual_goals, 0))), 0) as avg_accuracy,
-       COUNT(CASE WHEN p.points = 100 THEN 1 END) as perfect_predictions
+       COUNT(CASE WHEN p.points = 100 THEN 1 END) as perfect_predictions,
+       COUNT(CASE WHEN p.winner_bonus = 50 THEN 1 END) as correct_winners
      FROM users u
      LEFT JOIN predictions p ON u.id = p.user_id
      GROUP BY u.id
@@ -210,9 +270,9 @@ router.post('/matches/:id/result', (req, res) => {
 
 // Calculate points for a specific match
 function calculateMatchPoints(matchId, callback) {
-  // Get match result
+  // Get match result and team names
   db.get(
-    `SELECT home_score, away_score FROM matches WHERE id = ? AND status = 'completed'`,
+    `SELECT home_team, away_team, home_score, away_score FROM matches WHERE id = ? AND status = 'completed'`,
     [matchId],
     (err, match) => {
       if (err) {
@@ -229,21 +289,59 @@ function calculateMatchPoints(matchId, callback) {
       
       const actualGoals = match.home_score + match.away_score;
       
-      // Update predictions with actual goals and points for this match
-      db.run(
-        `UPDATE predictions
-         SET actual_goals = ?,
-             points = MAX(0, 100 - (ABS(predicted_goals - ?) * 10)),
-             locked = 1
-         WHERE match_id = ?`,
-        [actualGoals, actualGoals, matchId],
-        (err) => {
+      // Determine actual winner
+      let actualWinner = 'draw';
+      if (match.home_score > match.away_score) {
+        actualWinner = match.home_team;
+      } else if (match.away_score > match.home_score) {
+        actualWinner = match.away_team;
+      }
+      
+      // Get all predictions for this match
+      db.all(
+        `SELECT id, predicted_goals, predicted_winner FROM predictions WHERE match_id = ?`,
+        [matchId],
+        (err, predictions) => {
           if (err) {
-            console.error('Error updating predictions:', err);
-          } else {
-            console.log(`Points calculated for match ${matchId}: ${actualGoals} goals`);
+            console.error('Error getting predictions:', err);
+            if (callback) callback(err);
+            return;
           }
-          if (callback) callback(err);
+          
+          // Update each prediction with points
+          const updatePromises = predictions.map(pred => {
+            return new Promise((resolve, reject) => {
+              // Calculate goal prediction points
+              const goalPoints = Math.max(0, 100 - (Math.abs(pred.predicted_goals - actualGoals) * 10));
+              
+              // Calculate winner bonus (50 points if correct)
+              const winnerBonus = (pred.predicted_winner && pred.predicted_winner === actualWinner) ? 50 : 0;
+              
+              db.run(
+                `UPDATE predictions
+                 SET actual_goals = ?,
+                     points = ?,
+                     winner_bonus = ?,
+                     locked = 1
+                 WHERE id = ?`,
+                [actualGoals, goalPoints, winnerBonus, pred.id],
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+          });
+          
+          Promise.all(updatePromises)
+            .then(() => {
+              console.log(`Points calculated for match ${matchId}: ${actualGoals} goals, winner: ${actualWinner}`);
+              if (callback) callback(null);
+            })
+            .catch((err) => {
+              console.error('Error updating predictions:', err);
+              if (callback) callback(err);
+            });
         }
       );
     }

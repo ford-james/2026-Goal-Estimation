@@ -167,8 +167,8 @@ export function Leaderboard() {
                     </div>
                     
                     {/* Stats Row */}
-                    <div style={{ 
-                      display: 'flex', 
+                    <div style={{
+                      display: 'flex',
                       gap: 'var(--spacing-05)',
                       fontSize: '0.75rem',
                       color: 'var(--ibm-gray-70)',
@@ -181,6 +181,14 @@ export function Leaderboard() {
                       <span>
                         <strong style={{ color: 'var(--success)' }}>{player.perfect_predictions || 0}</strong> perfect
                       </span>
+                      {(player.correct_winners || 0) > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>
+                            <strong style={{ color: '#f59e0b' }}>🏆 {player.correct_winners}</strong> winners
+                          </span>
+                        </>
+                      )}
                       {player.predictions > 0 && (
                         <>
                           <span>•</span>

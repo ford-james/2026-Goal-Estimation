@@ -12,6 +12,20 @@ export function UserSelect({ onSelect }) {
       .finally(() => setLoading(false));
   }, []);
 
+  // Group users by team
+  const groupedUsers = users.reduce((acc, user) => {
+    const team = user.team || 'Security';
+    if (!acc[team]) {
+      acc[team] = [];
+    }
+    acc[team].push(user);
+    return acc;
+  }, {});
+
+  // Sort teams to ensure Security comes first, then Storage
+  const teamOrder = ['Security', 'Storage'];
+  const sortedTeams = teamOrder.filter(team => groupedUsers[team]);
+
   if (loading) {
     return (
       <div style={{ 
@@ -71,96 +85,129 @@ export function UserSelect({ onSelect }) {
           </p>
         </div>
 
-        {/* User Grid */}
-        <div style={{ 
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: 'var(--spacing-06)',
-          marginBottom: 'var(--spacing-07)'
-        }}>
-          {users.map((user, index) => (
-            <button
-              key={user.id}
-              onClick={() => onSelect(user.id)}
-              className="card hover-lift"
-              style={{
-                padding: 'var(--spacing-07) var(--spacing-05)',
-                fontSize: '1.125rem',
-                fontWeight: '600',
-                background: 'white',
-                color: 'var(--ibm-gray-100)',
-                border: '2px solid transparent',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                animation: `fadeIn 0.5s ease-out ${index * 0.1}s both`,
-                fontFamily: 'var(--font-family)'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = user.avatar_color;
-                e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
-                e.currentTarget.style.boxShadow = `0 12px 32px ${user.avatar_color}40`;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'transparent';
-                e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-              }}
-            >
-              {/* Color accent bar */}
+        {/* Teams Section */}
+        <div style={{ marginBottom: 'var(--spacing-07)' }}>
+          {sortedTeams.map((teamName, teamIndex) => (
+            <div key={teamName} style={{ marginBottom: 'var(--spacing-08)' }}>
+              {/* Team Header */}
               <div style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '4px',
-                background: `linear-gradient(90deg, ${user.avatar_color} 0%, ${user.avatar_color}cc 100%)`,
-                transition: 'height 0.3s ease'
-              }} />
-              
-              {/* Avatar circle */}
-              <div style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                background: `linear-gradient(135deg, ${user.avatar_color} 0%, ${user.avatar_color}dd 100%)`,
-                margin: '0 auto var(--spacing-04)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '1.75rem',
-                color: 'white',
-                fontWeight: '700',
-                boxShadow: `0 4px 12px ${user.avatar_color}40`,
-                transition: 'all 0.3s ease'
+                marginBottom: 'var(--spacing-05)',
+                animation: `slideIn 0.5s ease-out ${teamIndex * 0.2}s both`
               }}>
-                {user.display_name.charAt(0)}
+                <h2 style={{
+                  fontSize: '1.5rem',
+                  fontWeight: '600',
+                  color: 'var(--ibm-gray-100)',
+                  marginBottom: 'var(--spacing-02)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--spacing-03)'
+                }}>
+                  <span style={{ fontSize: '1.75rem' }}>
+                    {teamName === 'Security' ? '🔒' : '💾'}
+                  </span>
+                  {teamName} Team
+                </h2>
+                <div style={{
+                  height: '3px',
+                  width: '60px',
+                  background: 'linear-gradient(90deg, var(--ibm-blue-60) 0%, var(--ibm-purple-50) 100%)',
+                  borderRadius: '2px'
+                }} />
               </div>
-              
-              {/* Name */}
+
+              {/* User Grid */}
               <div style={{
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: 'var(--ibm-gray-100)',
-                marginBottom: 'var(--spacing-02)',
-                lineHeight: '1.3'
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+                gap: 'var(--spacing-06)'
               }}>
-                {user.name.split(' ').map((part, idx) => (
-                  <div key={idx}>{part}</div>
+                {groupedUsers[teamName].map((user, index) => (
+                  <button
+                    key={user.id}
+                    onClick={() => onSelect(user.id)}
+                    className="card hover-lift"
+                    style={{
+                      padding: 'var(--spacing-07) var(--spacing-05)',
+                      fontSize: '1.125rem',
+                      fontWeight: '600',
+                      background: 'white',
+                      color: 'var(--ibm-gray-100)',
+                      border: '2px solid transparent',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      animation: `fadeIn 0.5s ease-out ${(teamIndex * 0.2) + (index * 0.05)}s both`,
+                      fontFamily: 'var(--font-family)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = user.avatar_color;
+                      e.currentTarget.style.transform = 'translateY(-8px) scale(1.02)';
+                      e.currentTarget.style.boxShadow = `0 12px 32px ${user.avatar_color}40`;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'transparent';
+                      e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                    }}
+                  >
+                    {/* Color accent bar */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background: `linear-gradient(90deg, ${user.avatar_color} 0%, ${user.avatar_color}cc 100%)`,
+                      transition: 'height 0.3s ease'
+                    }} />
+                    
+                    {/* Avatar circle */}
+                    <div style={{
+                      width: '64px',
+                      height: '64px',
+                      borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${user.avatar_color} 0%, ${user.avatar_color}dd 100%)`,
+                      margin: '0 auto var(--spacing-04)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '1.75rem',
+                      color: 'white',
+                      fontWeight: '700',
+                      boxShadow: `0 4px 12px ${user.avatar_color}40`,
+                      transition: 'all 0.3s ease'
+                    }}>
+                      {user.display_name.charAt(0)}
+                    </div>
+                    
+                    {/* Name */}
+                    <div style={{
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      color: 'var(--ibm-gray-100)',
+                      marginBottom: 'var(--spacing-02)',
+                      lineHeight: '1.3'
+                    }}>
+                      {user.name.split(' ').map((part, idx) => (
+                        <div key={idx}>{part}</div>
+                      ))}
+                    </div>
+                    
+                    {/* Subtitle */}
+                    <div style={{
+                      fontSize: '0.75rem',
+                      color: 'var(--ibm-gray-60)',
+                      fontWeight: '400'
+                    }}>
+                      Click to continue
+                    </div>
+                  </button>
                 ))}
               </div>
-              
-              {/* Subtitle */}
-              <div style={{
-                fontSize: '0.75rem',
-                color: 'var(--ibm-gray-60)',
-                fontWeight: '400'
-              }}>
-                Click to continue
-              </div>
-            </button>
+            </div>
           ))}
         </div>
 

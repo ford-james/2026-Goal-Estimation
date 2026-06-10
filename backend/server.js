@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const routes = require('./routes');
 
 const app = express();
@@ -15,6 +16,14 @@ app.use('/api', routes);
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'World Cup API is running' });
+});
+
+// Serve static files from the public directory (built frontend)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Serve index.html for all other routes (SPA support)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server

@@ -5,15 +5,18 @@ export const api = {
     fetch(`${API}/users`).then(r => r.json()),
   
   // Per-match prediction endpoints
-  submitPrediction: (userId, matchId, goals) =>
+  submitPrediction: (userId, matchId, goals, predictedWinner) =>
     fetch(`${API}/predictions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId, matchId, goals })
+      body: JSON.stringify({ userId, matchId, goals, predictedWinner })
     }).then(r => r.json()),
   
   getPredictionsForMatch: (matchId) =>
     fetch(`${API}/predictions/match/${matchId}`).then(r => r.json()),
+  
+  getMatchPredictionStats: (matchId) =>
+    fetch(`${API}/predictions/match/${matchId}/stats`).then(r => r.json()),
   
   getUserPredictions: (userId) =>
     fetch(`${API}/predictions/user/${userId}`).then(r => r.json()),
